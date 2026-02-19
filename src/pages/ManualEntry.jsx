@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Edit, CheckCircle, X } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const ManualEntry = () => {
@@ -27,51 +27,48 @@ const ManualEntry = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setIsProcessing(true);
-    
-    try {
-      // Format data for API
-      const nutritionData = {
-        calories: formData.calories,
-        protein: formData.protein,
-        fats: formData.fats,
-        carbohydrates: formData.carbohydrates,
-        sugar: formData.sugar,
-        sodium: formData.sodium,
-        saturated_fat: formData.saturated_fat,
-        trans_fat: formData.trans_fat,
-        cholesterol: formData.cholesterol
-      };
 
-      const response = await fetch('http://localhost:8000/manual-entry/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        },
-        body: JSON.stringify({
-          ingredients_text: formData.ingredients,
-          nutrition_data: nutritionData
-        })
-      });
+    // Build result from entered form values (dummy scoring)
+    const ingredientsList = formData.ingredients
+      ? formData.ingredients.split(/[,\n]+/).map(s => s.trim()).filter(Boolean)
+      : ['No ingredients entered'];
 
-      const data = await response.json();
+    const nutritionEntries = {
+      Calories: formData.calories || 0,
+      Protein: formData.protein || 0,
+      Fats: formData.fats || 0,
+      Carbohydrates: formData.carbohydrates || 0,
+      Sugar: formData.sugar || 0,
+      Sodium: formData.sodium || 0,
+      'Saturated Fat': formData.saturated_fat || 0,
+      'Trans Fat': formData.trans_fat || 0,
+      Cholesterol: formData.cholesterol || 0
+    };
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to process data');
-      }
+    // Simple heuristic score based on entered values
+    const sodium = parseFloat(formData.sodium) || 0;
+    const sugar = parseFloat(formData.sugar) || 0;
+    const protein = parseFloat(formData.protein) || 0;
+    const fiber = 0;
+    const score = Math.min(100, Math.max(0,
+      60 + protein * 1.5 - sodium * 0.05 - sugar * 0.8 + fiber * 2
+    ));
 
-      // Navigate to results page with the analysis data
-      navigate('/result', { state: { analysisData: data } });
+    const analysisData = {
+      total_score: parseFloat(score.toFixed(1)),
+      analysis_summary:
+        'Manual entry analysis complete. The nutritional profile has been evaluated based on the values you provided. Review the breakdown below for detailed insights.',
+      ingredients: { score: parseFloat((score * 0.95).toFixed(1)), raw_data: ingredientsList },
+      nutrition: { data: nutritionEntries }
+    };
 
-    } catch (error) {
-      console.error('Submission error:', error);
-      alert('Failed to analyze data. Please try again.');
-    } finally {
+    setTimeout(() => {
       setIsProcessing(false);
-    }
+      navigate('/result', { state: { analysisData } });
+    }, 1000);
   };
 
   if (isProcessing) {

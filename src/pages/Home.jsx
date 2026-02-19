@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
-import { 
-  Microscope, 
-  ShieldCheck, 
-  TrendingUp,
+import {
   Camera,
-  Search,
   CheckCircle,
-  TrendingUp as Trend
+  Microscope,
+  Search,
+  ShieldCheck,
+  TrendingUp as Trend,
+  TrendingUp
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import OnboardingModal from '../components/OnboardingModal';
 
 const Home = () => {
   const [activeFeature, setActiveFeature] = useState(0);
@@ -16,6 +17,9 @@ const Home = () => {
     workflow: false,
     features: false
   });
+  const [showOnboarding, setShowOnboarding] = useState(
+    () => localStorage.getItem('showOnboarding') === 'true'
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -93,6 +97,9 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFF5F8] via-white to-[#FFF0F5] overflow-x-hidden">
+      {showOnboarding && (
+        <OnboardingModal onClose={() => setShowOnboarding(false)} />
+      )}
       <div className="container mx-auto px-4 py-16 md:py-24">
         {/* Hero Section */}
         <div className="text-center max-w-4xl mx-auto mb-16">
@@ -120,7 +127,7 @@ const Home = () => {
               hover:scale-105 hover:shadow-xl 
               shadow-[#FF4081]/30 transform"
             >
-              Scan Food Label
+              Upload Food Label
             </NavLink>
             <NavLink 
               to="/manual-entry"

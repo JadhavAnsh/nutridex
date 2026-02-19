@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import loginImg from '../assests/login.jpg';
-import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
@@ -10,49 +9,19 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { checkAuth } = useAuth();
+  const { login } = useAuth();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    try {
-      const response = await fetch('http://localhost:8000/login/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password })
-      });
+    // Dummy auth — any credentials work
+    const name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    login(name, email);
+    navigate('/');
 
-      console.log('Response status:', response.status);
-      const data = await response.json();
-      console.log('Response data:', data);
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      // Store tokens in localStorage
-      localStorage.setItem('accessToken', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      // Set authorization header for future requests
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access}`;
-
-      // Use checkAuth instead of refreshAuth
-      checkAuth();
-
-      // Redirect to the home page on successful login
-      navigate('/');
-    } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Failed to login. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    setIsLoading(false);
   };
 
   return (

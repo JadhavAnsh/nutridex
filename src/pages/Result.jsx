@@ -1,8 +1,74 @@
-import React, { useEffect, useState } from 'react';
-import { FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
-import { useLocation, Navigate } from 'react-router-dom';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
+import { useEffect, useState } from 'react';
 import { Pie } from 'react-chartjs-2';
+import { FiAlertCircle, FiCheckCircle, FiUser } from 'react-icons/fi';
+import { Navigate, useLocation } from 'react-router-dom';
+
+// Generate personalised warnings based on stored health profile
+function getPersonalisedInsights(analysisData, profile) {
+  if (!profile) return [];
+  const insights = [];
+  const nutrition = analysisData?.nutrition?.data || {};
+  const ingredients = (analysisData?.ingredients?.raw_data || []).join(' ').toLowerCase();
+
+  const sodium   = parseFloat(nutrition['Sodium']   ?? nutrition['sodium']   ?? 0);
+  const sugar    = parseFloat(nutrition['Sugar']    ?? nutrition['sugar']    ?? 0);
+  const satFat   = parseFloat(nutrition['Saturated Fat'] ?? nutrition['saturated_fat'] ?? 0);
+  const chol     = parseFloat(nutrition['Cholesterol'] ?? nutrition['cholesterol'] ?? 0);
+  const calories = parseFloat(nutrition['Calories']  ?? nutrition['calories']  ?? 0);
+  const totalFat = parseFloat(nutrition['Total Fat'] ?? nutrition['Fats'] ?? nutrition['fats'] ?? 0);
+
+  if (profile.conditions.includes('diabetes')) {
+    if (sugar > 10)
+      insights.push({ type: 'warning', icon: '🩸', label: 'Diabetes', text: `High sugar content (${sugar}g) — may spike blood glucose. Limit intake.` });
+    else
+      insights.push({ type: 'good', icon: '🩸', label: 'Diabetes', text: `Sugar level (${sugar}g) is within a safe range for most diabetics.` });
+  }
+  if (profile.conditions.includes('hypertension') || profile.conditions.includes('heart_disease')) {
+    if (sodium > 400)
+      insights.push({ type: 'warning', icon: '💢', label: 'Blood Pressure', text: `High sodium (${sodium}mg) — exceeds recommended limits for hypertension/heart health.` });
+    else
+      insights.push({ type: 'good', icon: '💢', label: 'Blood Pressure', text: `Sodium level (${sodium}mg) is acceptable for blood pressure management.` });
+  }
+  if (profile.conditions.includes('heart_disease')) {
+    if (satFat > 5 || chol > 60)
+      insights.push({ type: 'warning', icon: '❤️', label: 'Heart Health', text: `Saturated fat (${satFat}g) or cholesterol (${chol}mg) is elevated — not ideal for heart disease management.` });
+    else
+      insights.push({ type: 'good', icon: '❤️', label: 'Heart Health', text: `Saturated fat and cholesterol levels are within heart-healthy limits.` });
+  }
+  if (profile.conditions.includes('celiac')) {
+    const glutenIngreds = ['wheat', 'barley', 'rye', 'gluten', 'flour', 'semolina', 'spelt', 'malt'];
+    const found = glutenIngreds.filter(g => ingredients.includes(g));
+    if (found.length > 0)
+      insights.push({ type: 'warning', icon: '🌾', label: 'Gluten', text: `Contains possible gluten sources: ${found.join(', ')}. Not safe for celiac disease.` });
+    else
+      insights.push({ type: 'good', icon: '🌾', label: 'Gluten', text: 'No obvious gluten-containing ingredients detected.' });
+  }
+  if (profile.conditions.includes('lactose_intolerance')) {
+    const dairyIngreds = ['milk', 'lactose', 'cream', 'butter', 'cheese', 'whey', 'casein', 'dairy'];
+    const found = dairyIngreds.filter(d => ingredients.includes(d));
+    if (found.length > 0)
+      insights.push({ type: 'warning', icon: '🥛', label: 'Lactose', text: `Contains dairy ingredients: ${found.join(', ')}. May cause issues with lactose intolerance.` });
+    else
+      insights.push({ type: 'good', icon: '🥛', label: 'Lactose', text: 'No dairy ingredients detected — safe for lactose intolerance.' });
+  }
+  if (profile.conditions.includes('obesity')) {
+    if (calories > 250 || totalFat > 12)
+      insights.push({ type: 'warning', icon: '⚖️', label: 'Weight Management', text: `Calorie-dense product (${calories} kcal, ${totalFat}g fat). Consume in moderation.` });
+    else
+      insights.push({ type: 'good', icon: '⚖️', label: 'Weight Management', text: `Relatively low calorie content (${calories} kcal) — suitable for weight management.` });
+  }
+
+  // BMI note
+  if (profile.bmi) {
+    let bmiNote = null;
+    if (profile.bmi >= 30 && calories > 300)
+      bmiNote = { type: 'warning', icon: '📊', label: 'BMI Note', text: `Your BMI is ${profile.bmi}. This high-calorie food (${calories} kcal) may not align with your weight goals.` };
+    if (bmiNote) insights.push(bmiNote);
+  }
+
+  return insights;
+}
 
 // Register ChartJS components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -74,6 +140,13 @@ export default function Result() {
   // Get circle values and category details
   const { offset, circumference } = calculateCircleProgress(analysisData.total_score);
   const scoreDetails = getScoreDetails(analysisData.total_score);
+
+  // Personalized health insights
+  const healthProfile = (() => {
+    try { return JSON.parse(localStorage.getItem('userHealthProfile')); }
+    catch { return null; }
+  })();
+  const personalInsights = getPersonalisedInsights(analysisData, healthProfile);
 
   // Prepare data for pie chart
   const nutritionChartData = {
@@ -187,6 +260,43 @@ export default function Result() {
             </h2>
             <p className="text-gray-600">{analysisData.analysis_summary}</p>
           </div>
+
+          {/* Personalised Health Insights */}
+          {personalInsights.length > 0 && (
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <FiUser className="w-5 h-5 text-[#FF4081]" />
+                <h2 className="text-2xl font-semibold bg-gradient-to-r from-[#FF4081] to-[#F50057] text-transparent bg-clip-text">
+                  Your Personal Health Insights
+                </h2>
+              </div>
+              <div className="space-y-3">
+                {personalInsights.map((ins, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-3 p-3.5 rounded-xl border ${
+                      ins.type === 'warning'
+                        ? 'bg-red-50 border-red-100'
+                        : 'bg-emerald-50 border-emerald-100'
+                    }`}
+                  >
+                    <span className="text-xl leading-none mt-0.5">{ins.icon}</span>
+                    <div className="flex-1">
+                      <p className={`text-xs font-bold uppercase tracking-wide mb-0.5 ${
+                        ins.type === 'warning' ? 'text-red-400' : 'text-emerald-500'
+                      }`}>{ins.label}</p>
+                      <p className={`text-sm ${
+                        ins.type === 'warning' ? 'text-red-700' : 'text-emerald-700'
+                      }`}>{ins.text}</p>
+                    </div>
+                    {ins.type === 'warning'
+                      ? <FiAlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                      : <FiCheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Ingredients Analysis */}
           <div className="grid md:grid-cols-2 gap-6">

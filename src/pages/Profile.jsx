@@ -1,61 +1,47 @@
-import { useState } from 'react';
-import { FiActivity, FiClock, FiLogOut, FiUser } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-
-const DUMMY_HISTORY = [
-  {
-    id: 1,
-    created_at: '2026-02-15T10:23:00Z',
-    scores: { total: 72.5, ingredients: 68.0 },
-    analysis_summary: 'This product has a good nutritional profile with moderate processing. Contains some beneficial ingredients but watch out for sodium levels.',
-    ingredients_data: { raw_data: ['Whole Wheat Flour', 'Water', 'Sugar', 'Yeast', 'Salt', 'Vegetable Oil', 'Niacin', 'Iron'] },
-    nutrition_data: { calories: 120, protein: 4, total_fat: 2.5, carbohydrates: 22, sugar: 3, sodium: 180, fiber: 2 }
-  },
-  {
-    id: 2,
-    created_at: '2026-02-12T14:45:00Z',
-    scores: { total: 45.3, ingredients: 40.0 },
-    analysis_summary: 'Moderately processed product with higher sugar content. Nutritional value is limited. Consider healthier alternatives.',
-    ingredients_data: { raw_data: ['Sugar', 'Enriched Flour', 'Palm Oil', 'Cocoa Powder', 'Salt', 'Soy Lecithin', 'Vanillin'] },
-    nutrition_data: { calories: 160, protein: 2, total_fat: 7, carbohydrates: 24, sugar: 12, sodium: 110, fiber: 1 }
-  },
-  {
-    id: 3,
-    created_at: '2026-02-10T09:10:00Z',
-    scores: { total: 88.0, ingredients: 85.5 },
-    analysis_summary: 'Excellent nutritional profile. Minimal processing with wholesome ingredients. High in fiber and protein.',
-    ingredients_data: { raw_data: ['Oats', 'Honey', 'Almonds', 'Dried Cranberries', 'Sunflower Seeds', 'Coconut Oil'] },
-    nutrition_data: { calories: 200, protein: 6, total_fat: 8, carbohydrates: 28, sugar: 10, sodium: 50, fiber: 4 }
-  },
-  {
-    id: 4,
-    created_at: '2026-02-08T17:30:00Z',
-    scores: { total: 32.1, ingredients: 28.0 },
-    analysis_summary: 'Highly processed product with multiple artificial additives. High in sodium and saturated fats.',
-    ingredients_data: { raw_data: ['Water', 'Modified Starch', 'Sodium Phosphate', 'Artificial Flavors', 'Yellow 5', 'Red 40'] },
-    nutrition_data: { calories: 250, protein: 3, total_fat: 12, carbohydrates: 32, sugar: 18, sodium: 480, fiber: 0 }
-  },
-  {
-    id: 5,
-    created_at: '2026-02-05T12:00:00Z',
-    scores: { total: 61.8, ingredients: 60.0 },
-    analysis_summary: 'Reasonably healthy product with moderate processing. Good source of vitamins and minerals.',
-    ingredients_data: { raw_data: ['Skim Milk', 'Strawberries', 'Sugar', 'Pectin', 'Citric Acid', 'Vitamin D3'] },
-    nutrition_data: { calories: 130, protein: 5, total_fat: 0, carbohydrates: 26, sugar: 20, sodium: 75, fiber: 1 }
-  }
-];
+import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../api/axios';
+import { FiUser, FiMail, FiCalendar, FiLogOut, FiActivity, FiClock } from 'react-icons/fi';
 
 export default function Profile() {
   const { user, logout } = useAuth();
-  const [historyData] = useState(DUMMY_HISTORY);
+  const [profileData, setProfileData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [historyData, setHistoryData] = useState([]);
   const navigate = useNavigate();
 
-  const profileData = {
-    full_name: user?.full_name || 'Demo User',
-    email: user?.email || 'demo@nutridex.com',
-    date_joined: user?.date_joined || new Date().toISOString()
-  };
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await axiosInstance.get('/profile/');
+        setProfileData(response.data);
+      } catch (err) {
+        setError('Failed to load profile data');
+        console.error('Profile fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await axiosInstance.get('/user-history/');
+        if (response.data.success) {
+          setHistoryData(response.data.history);
+        }
+      } catch (err) {
+        console.error('History fetch error:', err);
+      }
+    };
+
+    fetchHistory();
+  }, []);
 
   const handleLogout = () => {
     logout();

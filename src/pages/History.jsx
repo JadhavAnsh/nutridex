@@ -2,6 +2,7 @@ import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 import { FiAlertCircle, FiCalendar, FiCheckCircle, FiUser } from 'react-icons/fi';
 import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 // Register ChartJS components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -71,6 +72,7 @@ function getHistoryInsights(historyData, profile) {
 }
 
 export default function History() {
+  const { user } = useAuth();
   const location = useLocation();
   const historyData = location.state?.historyData;
 
@@ -125,7 +127,12 @@ export default function History() {
   const scoreDetails = getScoreDetails(historyData.scores.total);
 
   // Personalized health insights
-  const healthProfile = (() => {
+  const healthProfile = user?.weight ? {
+    weight: user.weight,
+    height: user.height,
+    bmi: user.bmi,
+    conditions: user.conditions
+  } : (() => {
     try { return JSON.parse(localStorage.getItem('userHealthProfile')); }
     catch { return null; }
   })();

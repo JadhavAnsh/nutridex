@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FiActivity, FiArrowLeft, FiArrowRight, FiCheck, FiHeart, FiUser } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
+import axiosInstance from '../api/axios';
 
 const CONDITIONS = [
   {
@@ -42,7 +43,7 @@ const CONDITIONS = [
 ];
 
 export default function OnboardingModal({ onClose }) {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState({
     weight: '',
@@ -79,17 +80,24 @@ export default function OnboardingModal({ onClose }) {
 
   const handleBack = () => setStep(s => s - 1);
 
-  const handleFinish = () => {
-    const bmi = parseFloat(profile.weight) / Math.pow(parseFloat(profile.height) / 100, 2);
+  const handleFinish = async () => {
+    const bmiVal = parseFloat(profile.weight) / Math.pow(parseFloat(profile.height) / 100, 2);
     const healthProfile = {
       weight: parseFloat(profile.weight),
       height: parseFloat(profile.height),
-      bmi: parseFloat(bmi.toFixed(1)),
+      bmi: parseFloat(bmiVal.toFixed(1)),
       conditions: profile.conditions
     };
-    localStorage.setItem('userHealthProfile', JSON.stringify(healthProfile));
-    localStorage.removeItem('showOnboarding');
-    onClose();
+
+    try {
+      const response = await axiosInstance.post('/update-onboarding/', healthProfile);
+      updateProfile(response.data.user);
+      localStorage.removeItem('showOnboarding');
+      onClose();
+    } catch (err) {
+      console.error('Error saving onboarding data:', err);
+      onClose();
+    }
   };
 
   const handleSkip = () => {

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import loginImg from '../assests/login.jpg';
+import axiosInstance from '../api/axios';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
@@ -9,19 +10,33 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { checkAuth } = useAuth();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Dummy auth — any credentials work
-    const name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    login(name, email);
-    navigate('/');
+    try {
+      const response = await axiosInstance.post('/login/', { email, password });
+      const data = response.data;
 
-    setIsLoading(false);
+      // Store tokens in localStorage
+      localStorage.setItem('accessToken', data.access);
+      localStorage.setItem('refreshToken', data.refresh);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Use checkAuth to update context state
+      checkAuth();
+
+      // Redirect to the home page on successful login
+      navigate('/');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to login. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

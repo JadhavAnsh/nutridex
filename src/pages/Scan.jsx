@@ -1,12 +1,13 @@
-import {
-  Camera,
-  CheckCircle,
-  ShieldCheck,
-  Upload,
-  X
+import React, { useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import axiosInstance from '../api/axios';
+import { 
+  Camera, 
+  Upload, 
+  X, 
+  CheckCircle, 
+  ShieldCheck 
 } from 'lucide-react';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 // Import example images (you'll need to replace these with actual paths)
 import ingredientsExample from '../assests/ingredients.png';
@@ -122,32 +123,7 @@ const Scan = () => {
     </div>
   );
 
-  const DUMMY_RESULT = {
-    total_score: 74.2,
-    analysis_summary:
-      'This product has a good nutritional profile with moderate processing. The ingredients list is relatively clean with recognizable whole-food components. Sodium is within acceptable range. The fiber content is commendable.',
-    ingredients: {
-      score: 71.0,
-      raw_data: [
-        'Whole Wheat Flour', 'Water', 'Sugar', 'Yeast', 'Salt',
-        'Vegetable Oil', 'Niacin', 'Reduced Iron', 'Thiamine Mononitrate'
-      ]
-    },
-    nutrition: {
-      data: {
-        Calories: 120,
-        Protein: 4,
-        'Total Fat': 2.5,
-        Carbohydrates: 22,
-        Sugar: 3,
-        Sodium: 180,
-        Fiber: 2,
-        Cholesterol: 0
-      }
-    }
-  };
-
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!nutritionImage || !ingredientsImage) {
       alert('Please upload both nutrition facts and ingredients images');
       return;
@@ -155,11 +131,28 @@ const Scan = () => {
 
     setIsProcessing(true);
 
-    // Simulate a brief processing delay then navigate with dummy data
-    setTimeout(() => {
+    try {
+      // Create form data
+      const formData = new FormData();
+      formData.append('nutrition_image', nutritionImage.file);
+      formData.append('ingredients_image', ingredientsImage.file);
+
+      const response = await axiosInstance.post('/result_api/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const data = response.data;
+
+      // Navigate to results page with the data
+      navigate('/result', { state: { analysisData: data } });
+    } catch (error) {
+      console.error('Analysis error:', error);
+      alert(error.response?.data?.error || 'Failed to analyze images. Please try again.');
+    } finally {
       setIsProcessing(false);
-      navigate('/result', { state: { analysisData: DUMMY_RESULT } });
-    }, 1500);
+    }
   };
 
   if (isProcessing) {

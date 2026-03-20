@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import signupImg from '../assests/signup.jpg';
-import { useAuth } from '../contexts/AuthContext';
+import axiosInstance from '../api/axios';
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -11,8 +11,8 @@ export default function Signup() {
     confirmPassword: ''
   });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -22,20 +22,43 @@ export default function Signup() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
+      setIsLoading(false);
       return;
     }
 
-    // Dummy signup — auto-login with entered details
-    login(formData.fullName, formData.email);
-    // Flag so Home shows the onboarding modal once
-    localStorage.setItem('showOnboarding', 'true');
-    navigate('/');
+    try {
+      const response = await axiosInstance.post('/register/', {
+        full_name: formData.fullName,
+        email: formData.email,
+        password: formData.password
+      });
+
+      const data = response.data;
+
+      // If response includes tokens (depends on your backend)
+      if (data.message === "Registration successful") {
+        // Flag so Home shows the onboarding modal once
+        localStorage.setItem('showOnboarding', 'true');
+        // Show success message
+        alert("Registration successful! Please login to continue.");
+        navigate('/login');
+      } else {
+        // Handle any other successful response
+        navigate('/login');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to create account. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -169,14 +192,16 @@ export default function Signup() {
 
               <button 
                 type="submit"
+                disabled={isLoading}
                 className="w-full py-3.5 
                 bg-gradient-to-r from-[#FF4081] to-[#F50057]
                 text-white font-semibold 
                 rounded-full transition-all duration-300 
                 hover:scale-105 hover:shadow-xl 
-                shadow-[#FF4081]/30 transform"
+                shadow-[#FF4081]/30 transform
+                disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Create Account
+                {isLoading ? 'Creating Account...' : 'Create Account'}
               </button>
             </form>
 

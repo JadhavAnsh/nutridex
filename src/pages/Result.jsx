@@ -231,6 +231,27 @@ export default function Result() {
 
       <div className="pt-8 pb-10 px-4"> {/* Adjusted padding-top */}
         <div className="container mx-auto max-w-4xl">
+          {/* Display Product Information if available */}
+          {(analysisData.product_name || analysisData.product_image) && (
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-6 flex items-center justify-center gap-6">
+              {analysisData.product_image && (
+                <img 
+                  src={analysisData.product_image} 
+                  alt={analysisData.product_name || "Product"} 
+                  className="w-24 h-24 object-cover rounded-lg shadow-sm border border-gray-100"
+                />
+              )}
+              <div className="text-left">
+                <h1 className="text-3xl font-bold text-gray-800">
+                  {analysisData.product_name || "Analyzed Product"}
+                </h1>
+                {analysisData.product_brand && analysisData.product_brand !== "Unknown Brand" && (
+                  <p className="text-gray-500 font-medium mt-1">Brand: {analysisData.product_brand}</p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Health Score */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6 text-center">
             <h2 className="text-2xl font-semibold 

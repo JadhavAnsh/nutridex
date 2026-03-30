@@ -1,19 +1,22 @@
-import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import axiosInstance from '../api/axios';
-import { 
-  Camera, 
-  Upload, 
-  X, 
-  CheckCircle, 
-  ShieldCheck 
+import {
+  Barcode,
+  Camera,
+  CheckCircle,
+  Image as ImageIcon,
+  ShieldCheck,
+  Upload,
+  X
 } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axiosInstance from '../api/axios';
 
 // Import example images (you'll need to replace these with actual paths)
 import ingredientsExample from '../assests/ingredients.png';
 import nutritionExample from '../assests/nutritionfacts.jpg';
 
 const Scan = () => {
+  const [activeTab, setActiveTab] = useState('image'); // 'image' or 'barcode'
   const [inputMethod, setInputMethod] = useState('upload');
   const [nutritionImage, setNutritionImage] = useState(null);
   const [ingredientsImage, setIngredientsImage] = useState(null);
@@ -21,6 +24,11 @@ const Scan = () => {
     ingredients: '',
     nutrition: ''
   });
+  
+  // Barcode specific state
+  const [barcodeString, setBarcodeString] = useState('');
+  const [barcodeImage, setBarcodeImage] = useState(null);
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
 
@@ -29,8 +37,10 @@ const Scan = () => {
     reader.onloadend = () => {
       if (type === 'nutrition') {
         setNutritionImage({ preview: reader.result, file });
-      } else {
+      } else if (type === 'ingredients') {
         setIngredientsImage({ preview: reader.result, file });
+      } else if (type === 'barcode') {
+        setBarcodeImage({ preview: reader.result, file });
       }
     };
     reader.readAsDataURL(file);
@@ -39,8 +49,10 @@ const Scan = () => {
   const handleRemoveImage = (type) => {
     if (type === 'nutrition') {
       setNutritionImage(null);
-    } else {
+    } else if (type === 'ingredients') {
       setIngredientsImage(null);
+    } else if (type === 'barcode') {
+      setBarcodeImage(null);
     }
   };
 
@@ -52,18 +64,20 @@ const Scan = () => {
           text-transparent bg-clip-text">
           {title}
         </h3>
-        <button 
-          className="text-sm text-[#FF4081] hover:underline"
-          onClick={() => window.open(exampleImage, '_blank')}
-        >
-          View Example
-        </button>
+        {exampleImage && (
+          <button 
+            className="text-sm text-[#FF4081] hover:underline"
+            onClick={() => window.open(exampleImage, '_blank')}
+          >
+            View Example
+          </button>
+        )}
       </div>
       <div className="border-4 border-dashed border-pink-200 
         rounded-2xl min-h-[400px] flex flex-col justify-center items-center 
         text-center p-6 transition-all duration-300 hover:border-pink-300">
         {image ? (
-          <div className="relative">
+          <div className="relative w-full flex justify-center">
             <img 
               src={image.preview} 
               alt={`${title} preview`} 
@@ -71,14 +85,14 @@ const Scan = () => {
             />
             <button
               onClick={() => handleRemoveImage(type)}
-              className="absolute top-2 right-2 bg-red-500 text-white 
-              rounded-full p-2 hover:bg-red-600 transition-colors"
+              className="absolute -top-2 -right-2 bg-red-500 text-white 
+              rounded-full p-2 hover:bg-red-600 transition-colors shadow-md"
             >
               <X className="w-5 h-5"/>
             </button>
           </div>
         ) : (
-          <label className="cursor-pointer flex flex-col items-center">
+          <label className="cursor-pointer flex flex-col items-center w-full h-full justify-center">
             <Camera className="w-16 h-16 text-[#FF4081] mb-4"/>
             <p className="text-xl font-semibold text-gray-700 mb-2">
               Upload {title}
@@ -99,27 +113,19 @@ const Scan = () => {
               <Upload className="w-5 h-5"/>
               Upload Image
             </div>
-            <img 
-              src={exampleImage} 
-              alt={`Example ${title}`}
-              className="mt-4 max-h-[200px] w-auto mx-auto opacity-50 group-hover:opacity-75 transition-opacity"
-            />
-            <p className="mt-2 text-xs text-gray-400">Example of {title.toLowerCase()} image</p>
+            {exampleImage && (
+              <>
+                <img 
+                  src={exampleImage} 
+                  alt={`Example ${title}`}
+                  className="mt-4 max-h-[150px] w-auto mx-auto opacity-50 group-hover:opacity-75 transition-opacity"
+                />
+                <p className="mt-2 text-xs text-gray-400">Example of {title.toLowerCase()} image</p>
+              </>
+            )}
           </label>
         )}
       </div>
-      {inputMethod === 'text' && (
-        <textarea
-          value={type === 'nutrition' ? textInput.nutrition : textInput.ingredients}
-          onChange={(e) => setTextInput({ 
-            ...textInput, 
-            [type]: e.target.value 
-          })}
-          placeholder={`Enter ${title.toLowerCase()}...`}
-          className="w-full h-[400px] mt-4 p-4 rounded-lg bg-white border border-gray-200 
-          text-gray-800 focus:ring-2 focus:ring-[#FF4081]"
-        />
-      )}
     </div>
   );
 
@@ -132,7 +138,6 @@ const Scan = () => {
     setIsProcessing(true);
 
     try {
-      // Create form data
       const formData = new FormData();
       formData.append('nutrition_image', nutritionImage.file);
       formData.append('ingredients_image', ingredientsImage.file);
@@ -144,12 +149,43 @@ const Scan = () => {
       });
 
       const data = response.data;
-
-      // Navigate to results page with the data
       navigate('/result', { state: { analysisData: data } });
     } catch (error) {
       console.error('Analysis error:', error);
       alert(error.response?.data?.error || 'Failed to analyze images. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleBarcodeAnalyze = async () => {
+    if (!barcodeString && !barcodeImage) {
+      alert('Please enter a barcode or upload a barcode image');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const formData = new FormData();
+      if (barcodeString) {
+        formData.append('barcode', barcodeString);
+      }
+      if (barcodeImage) {
+        formData.append('barcode_image', barcodeImage.file);
+      }
+
+      const response = await axiosInstance.post('/barcode_scan_api/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const data = response.data;
+      navigate('/result', { state: { analysisData: data } });
+    } catch (error) {
+      console.error('Barcode analysis error:', error);
+      alert(error.response?.data?.error || 'Failed to analyze barcode. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -162,17 +198,17 @@ const Scan = () => {
         <div className="w-24 h-24 rounded-full border-4 border-[#FF4081] 
           border-t-transparent animate-spin mb-8" />
         <div className="text-2xl font-semibold text-[#FF4081] mb-2">
-          Processing Images
+          Processing Label
         </div>
         <div className="text-gray-600 text-center max-w-sm px-4">
-          Please wait while we analyze your food label. This might take a few moments.
+          Please wait while we analyze your food product. This might take a few moments.
         </div>
         <div className="mt-8 flex flex-col items-center space-y-2">
           <div className="h-1 w-48 bg-pink-100 rounded-full overflow-hidden">
             <div className="h-full w-1/2 bg-[#FF4081] rounded-full 
               animate-[progressBar_1.5s_ease-in-out_infinite]" />
           </div>
-          <div className="text-sm text-gray-500">Analyzing nutritional data...</div>
+          <div className="text-sm text-gray-500">Analyzing product data...</div>
         </div>
       </div>
     );
@@ -181,57 +217,147 @@ const Scan = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFF5F8] via-white to-[#FFF0F5] pt-32 pb-16">
       <div className="container mx-auto max-w-6xl px-4">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-5xl font-extrabold 
             bg-gradient-to-r from-[#FF4081] to-[#F50057] 
             text-transparent bg-clip-text 
             mb-6 tracking-tight">
             Nutridex Scan
           </h1>
-          <p className="text-xl text-gray-700 max-w-2xl mx-auto mb-10">
-            Capture Your Food Label for Intelligent Nutritional Analysis
+          <p className="text-xl text-gray-700 max-w-2xl mx-auto">
+            Scan your food item for intelligent nutritional analysis
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {/* Ingredients Section */}
-          <div>
-            {renderImageUploader(
-              ingredientsImage, 
-              ingredientsExample, 
-              'ingredients', 
-              'Ingredients'
-            )}
-          </div>
-
-          {/* Nutrition Facts Section */}
-          <div>
-            {renderImageUploader(
-              nutritionImage, 
-              nutritionExample, 
-              'nutrition', 
-              'Nutrition Facts'
-            )}
+        {/* Tabs */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-white rounded-full p-1 shadow-md inline-flex border border-pink-100">
+            <button
+              onClick={() => setActiveTab('image')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all ${
+                activeTab === 'image' 
+                  ? 'bg-[#FF4081] text-white shadow-md' 
+                  : 'text-gray-600 hover:bg-pink-50'
+              }`}
+            >
+              <ImageIcon className="w-5 h-5" />
+              OCR Label Scan
+            </button>
+            <button
+              onClick={() => setActiveTab('barcode')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all ${
+                activeTab === 'barcode' 
+                  ? 'bg-[#FF4081] text-white shadow-md' 
+                  : 'text-gray-600 hover:bg-pink-50'
+              }`}
+            >
+              <Barcode className="w-5 h-5" />
+              Barcode Scan
+            </button>
           </div>
         </div>
 
-        {/* Analyze Button */}
-        <div className="text-center">
-          <button
-            onClick={handleAnalyze}
-            disabled={!nutritionImage || !ingredientsImage}
-            className="flex items-center gap-2 mx-auto
-            bg-gradient-to-r from-[#FF4081] to-[#F50057]
-            text-white font-semibold py-3.5 px-7 
-            rounded-full transition-all duration-300 
-            hover:scale-105 hover:shadow-xl 
-            shadow-[#FF4081]/30 transform
-            disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <CheckCircle className="w-6 h-6"/>
-            Analyze Food Label
-          </button>
-        </div>
+        {activeTab === 'image' && (
+          <div className="animate-fadeIn">
+            <div className="grid md:grid-cols-2 gap-8 mb-12">
+              <div>
+                {renderImageUploader(
+                  ingredientsImage, 
+                  ingredientsExample, 
+                  'ingredients', 
+                  'Ingredients'
+                )}
+              </div>
+              <div>
+                {renderImageUploader(
+                  nutritionImage, 
+                  nutritionExample, 
+                  'nutrition', 
+                  'Nutrition Facts'
+                )}
+              </div>
+            </div>
+
+            <div className="text-center">
+              <button
+                onClick={handleAnalyze}
+                disabled={!nutritionImage || !ingredientsImage}
+                className="flex items-center gap-2 mx-auto
+                bg-gradient-to-r from-[#FF4081] to-[#F50057]
+                text-white font-semibold py-3.5 px-7 
+                rounded-full transition-all duration-300 
+                hover:scale-105 hover:shadow-xl 
+                shadow-[#FF4081]/30 transform
+                disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <CheckCircle className="w-6 h-6"/>
+                Analyze Food Labels
+              </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'barcode' && (
+          <div className="animate-fadeIn max-w-2xl mx-auto">
+            <div className="bg-white rounded-3xl p-8 shadow-lg border border-pink-100 mb-8">
+              <h3 className="text-2xl font-bold text-center mb-6 
+                bg-gradient-to-r from-[#FF4081] to-[#F50057] 
+                text-transparent bg-clip-text">
+                Scan or Enter Barcode
+              </h3>
+              
+              <div className="mb-8">
+                <label className="block text-gray-700 font-medium mb-3">
+                  Enter Barcode Number
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Barcode className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    value={barcodeString}
+                    onChange={(e) => setBarcodeString(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:ring-[#FF4081] focus:border-[#FF4081] transition-colors"
+                    placeholder="e.g. 737628064502"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center mb-8">
+                <div className="h-px bg-gray-200 flex-1"></div>
+                <span className="px-4 text-gray-400 font-medium text-sm w-auto">OR UPLOAD IMAGE</span>
+                <div className="h-px bg-gray-200 flex-1"></div>
+              </div>
+
+              <div>
+                {renderImageUploader(
+                  barcodeImage, 
+                  null, // no example image
+                  'barcode', 
+                  'Barcode Image'
+                )}
+              </div>
+            </div>
+
+            <div className="text-center">
+              <button
+                onClick={handleBarcodeAnalyze}
+                disabled={!barcodeString && !barcodeImage}
+                className="flex items-center gap-2 mx-auto
+                bg-gradient-to-r from-[#FF4081] to-[#F50057]
+                text-white font-semibold py-3.5 px-7 
+                rounded-full transition-all duration-300 
+                hover:scale-105 hover:shadow-xl 
+                shadow-[#FF4081]/30 transform
+                disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <CheckCircle className="w-6 h-6"/>
+                Analyze Barcode
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Tips Section */}
         <div className="mt-16 max-w-3xl mx-auto bg-white rounded-3xl p-8 shadow-lg border border-pink-100">
@@ -279,6 +405,7 @@ const Scan = () => {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

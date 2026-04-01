@@ -10,16 +10,26 @@ import {
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import OnboardingModal from '../components/OnboardingModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const Home = () => {
+  const { isAuthenticated, user } = useAuth();
   const [activeFeature, setActiveFeature] = useState(0);
   const [visibleSections, setVisibleSections] = useState({
     workflow: false,
     features: false
   });
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => localStorage.getItem('showOnboarding') === 'true'
-  );
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem('showOnboardingDismissed') === 'true';
+    const missingHealthData = isAuthenticated && user && (!user.weight || !user.height || !Array.isArray(user.conditions));
+    setShowOnboarding(!!missingHealthData && !dismissed);
+  }, [isAuthenticated, user]);
+
+  const handleOnboardingClose = () => {
+    setShowOnboarding(false);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -98,7 +108,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFF5F8] via-white to-[#FFF0F5] overflow-x-hidden">
       {showOnboarding && (
-        <OnboardingModal onClose={() => setShowOnboarding(false)} />
+        <OnboardingModal onClose={handleOnboardingClose} />
       )}
       <div className="container mx-auto px-4 py-16 md:py-24">
         {/* Hero Section */}

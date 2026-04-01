@@ -1,22 +1,27 @@
-import React, { useState, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
-import { Menu, X, User } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
+import { UserButton, useAuth, useUser } from '@clerk/react';
+import { Menu, User, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { isAuthenticated, user, checkAuth } = useAuth();
+  const { isLoaded } = useAuth();
+  const { user } = useUser();
   const location = useLocation();
 
-  // Check auth on route change
   useEffect(() => {
-    checkAuth();
     setIsMenuOpen(false);
-  }, [location, checkAuth]);
+  }, [location]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
+
+  const displayName =
+    user?.fullName ||
+    user?.firstName ||
+    user?.primaryEmailAddress?.emailAddress?.split('@')?.[0] ||
+    'Account';
 
   return (
     <nav className="fixed w-full top-0 z-50 bg-white/80 backdrop-blur-md shadow-sm">
@@ -44,8 +49,7 @@ export default function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
-            {isAuthenticated ? (
-              // Show these buttons when user is logged in
+            {isLoaded && user ? (
               <NavLink 
                 to="/profile"
                 className="flex items-center px-5 py-2.5 
@@ -56,12 +60,11 @@ export default function Navbar() {
                 shadow-[#FF4081]/30"
               >
                 <User size={18} className="mr-2" />
-                {user?.full_name || 'Profile'}
+                {displayName}
               </NavLink>
             ) : (
-              // Show these buttons when user is not logged in
               <>
-                <NavLink 
+                <NavLink
                   to="/login"
                   className="px-5 py-2.5 
                   bg-white border border-pink-200
@@ -72,7 +75,7 @@ export default function Navbar() {
                 >
                   Login
                 </NavLink>
-                <NavLink 
+                <NavLink
                   to="/signup"
                   className="px-5 py-2.5 
                   bg-gradient-to-r from-[#FF4081] to-[#F50057]
@@ -85,6 +88,12 @@ export default function Navbar() {
                 </NavLink>
               </>
             )}
+
+            {isLoaded && user ? (
+              <div className="rounded-full border border-pink-100 bg-white p-0.5 shadow-sm">
+                <UserButton afterSignOutUrl="/" />
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -92,25 +101,28 @@ export default function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden absolute left-0 right-0 top-full bg-white shadow-lg">
             <div className="flex flex-col items-center py-4 space-y-4">
-              {isAuthenticated ? (
-                // Mobile profile button when logged in
-                <NavLink 
-                  to="/profile"
-                  onClick={toggleMenu}
-                  className="w-full text-center py-3 
-                  bg-gradient-to-r from-[#FF4081] to-[#F50057]
-                  text-white font-semibold 
-                  hover:opacity-90 transition-opacity"
-                >
-                  <span className="flex items-center justify-center">
-                    <User size={18} className="mr-2" />
-                    {user?.full_name || 'Profile'}
-                  </span>
-                </NavLink>
-              ) : (
-                // Mobile login/signup buttons when logged out
+              {isLoaded && user ? (
                 <>
                   <NavLink 
+                    to="/profile"
+                    onClick={toggleMenu}
+                    className="w-full text-center py-3 
+                    bg-gradient-to-r from-[#FF4081] to-[#F50057]
+                    text-white font-semibold 
+                    hover:opacity-90 transition-opacity"
+                  >
+                    <span className="flex items-center justify-center">
+                      <User size={18} className="mr-2" />
+                      {displayName}
+                    </span>
+                  </NavLink>
+                  <div className="pb-2">
+                    <UserButton afterSignOutUrl="/" />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <NavLink
                     to="/login"
                     onClick={toggleMenu}
                     className="w-full text-center py-3 
@@ -119,7 +131,7 @@ export default function Navbar() {
                   >
                     Login
                   </NavLink>
-                  <NavLink 
+                  <NavLink
                     to="/signup"
                     onClick={toggleMenu}
                     className="w-full text-center py-3 

@@ -1,5 +1,6 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
-import axiosInstance from '../api/axios';
+import { useClerk, useAuth as useClerkAuth, useUser } from '@clerk/react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import axiosInstance, { setAuthTokenGetter } from '../api/axios';
 
 const AuthContext = createContext(null);
 
@@ -12,47 +13,58 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isSignedIn, getToken } = useClerkAuth();
+  const { user: clerkUser } = useUser();
+  const { signOut } = useClerk();
+
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
 
-  const checkAuth = useCallback(() => {
-    const accessToken = localStorage.getItem('accessToken');
-    const userData = localStorage.getItem('user');
-    
-    if (accessToken && userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-      } catch (err) {
-        console.error('Error parsing stored user data', err);
-        handleLogout();
-      }
-    } else {
-      setIsAuthenticated(false);
+  const hydrateProfile = useCallback(async () => {
+    if (!isSignedIn) {
       setUser(null);
+      return;
     }
-  }, []);
+
+    setLoading(true);
+    try {
+      const response = await axiosInstance.get('/profile/');
+      setUser(response.data);
+      setError(null);
+    } catch (err) {
+      console.error('Profile hydration error:', err);
+      setError('Failed to fetch user profile');
+      setUser({
+        email: clerkUser?.primaryEmailAddress?.emailAddress || clerkUser?.emailAddresses?.[0]?.emailAddress,
+        full_name: clerkUser?.fullName || clerkUser?.firstName || 'User',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [isSignedIn, clerkUser]);
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    setAuthTokenGetter(isSignedIn ? getToken : null);
+  }, [getToken, isSignedIn]);
+
+  useEffect(() => {
+    hydrateProfile();
+  }, [hydrateProfile]);
+
+  const checkAuth = useCallback(async () => {
+    await hydrateProfile();
+  }, [hydrateProfile]);
 
   const handleLogout = useCallback(() => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
     localStorage.removeItem('userHealthProfile');
+    localStorage.removeItem('showOnboardingDismissed');
+    signOut();
     setUser(null);
-    setIsAuthenticated(false);
-  }, []);
+  }, [signOut]);
 
   const updateProfile = useCallback((updatedUser) => {
     setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    // Always sync the health profile if data exists
     if (updatedUser.weight || updatedUser.conditions) {
       localStorage.setItem('userHealthProfile', JSON.stringify({
         weight: updatedUser.weight,
@@ -63,46 +75,11 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = async (email, password) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const response = await axiosInstance.post('/login/', { email, password });
-      const data = response.data;
-
-      // Store tokens and user data
-      localStorage.setItem('accessToken', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      // Check if onboarding is needed
-      if (!data.user.weight) {
-        localStorage.setItem('showOnboarding', 'true');
-      } else {
-        localStorage.removeItem('showOnboarding');
-      }
-
-      // Update state
-      setUser(data.user);
-      setIsAuthenticated(true);
-
-      return true;
-    } catch (err) {
-      console.error('Login error:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to login. Please check your credentials.');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const value = {
-    isAuthenticated,
+    isAuthenticated: !!isSignedIn,
     user,
     loading,
     error,
-    login,
     logout: handleLogout,
     checkAuth,
     updateProfile

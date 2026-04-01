@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { FiActivity, FiArrowLeft, FiArrowRight, FiCheck, FiHeart, FiUser } from 'react-icons/fi';
-import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axios';
+import { useAuth } from '../contexts/AuthContext';
 
 const CONDITIONS = [
   {
@@ -44,6 +45,7 @@ const CONDITIONS = [
 
 export default function OnboardingModal({ onClose }) {
   const { user, updateProfile } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [profile, setProfile] = useState({
     weight: '',
@@ -90,9 +92,9 @@ export default function OnboardingModal({ onClose }) {
     };
 
     try {
-      const response = await axiosInstance.post('/update-onboarding/', healthProfile);
+      const response = await axiosInstance.patch('/profile/health/', healthProfile);
       updateProfile(response.data.user);
-      localStorage.removeItem('showOnboarding');
+      localStorage.removeItem('showOnboardingDismissed');
       onClose();
     } catch (err) {
       console.error('Error saving onboarding data:', err);
@@ -101,8 +103,14 @@ export default function OnboardingModal({ onClose }) {
   };
 
   const handleSkip = () => {
-    localStorage.removeItem('showOnboarding');
+    localStorage.setItem('showOnboardingDismissed', 'true');
     onClose();
+  };
+
+  const handleCompleteLaterInProfile = () => {
+    localStorage.setItem('showOnboardingDismissed', 'true');
+    onClose();
+    navigate('/profile');
   };
 
   const bmiPreview = () => {
@@ -154,7 +162,7 @@ export default function OnboardingModal({ onClose }) {
                   <FiUser className="w-7 h-7 text-[#FF4081]" />
                 </div>
                 <h2 className="text-2xl font-extrabold text-gray-800">
-                  Welcome, {firstName}! 👋
+                  Welcome, {firstName}
                 </h2>
                 <p className="text-gray-500 mt-1 text-sm">
                   Help us personalise your nutrition insights
@@ -267,11 +275,20 @@ export default function OnboardingModal({ onClose }) {
 
               {profile.conditions.length === 0 && (
                 <p className="text-center text-sm text-gray-400 mt-3">
-                  No conditions? That's great — select "None apply" by leaving empty
+                  No conditions selected is okay, you can leave this empty
                 </p>
               )}
             </div>
           )}
+
+          <div className="mt-4 text-center">
+            <button
+              onClick={handleCompleteLaterInProfile}
+              className="text-sm text-[#FF4081] hover:text-[#F50057] font-semibold"
+            >
+              Complete this later in profile settings
+            </button>
+          </div>
 
           {/* ── Buttons ── */}
           <div className="flex items-center justify-between mt-7 gap-3">

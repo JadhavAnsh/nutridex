@@ -1,18 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 
 const PrivateRoute = ({ children }) => {
-  const { isAuthenticated, checkAuth } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    const verifyAuth = async () => {
-      await checkAuth();
+    if (isLoaded) {
       setIsLoading(false);
-    };
-    verifyAuth();
-  }, [checkAuth]);
+    }
+  }, [isLoaded]);
 
   if (isLoading) {
     return (
@@ -22,7 +20,7 @@ const PrivateRoute = ({ children }) => {
     );
   }
   
-  if (!isAuthenticated) {
+  if (!isSignedIn) {
     return <Navigate to="/login" replace />;
   }
   

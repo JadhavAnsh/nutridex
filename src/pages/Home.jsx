@@ -1,21 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
-import { 
-  Microscope, 
-  ShieldCheck, 
-  TrendingUp,
+import {
+  ClipboardList,
   Camera,
-  Search,
   CheckCircle,
-  TrendingUp as Trend
+  Microscope,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp as Trend,
+  TrendingUp
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { NavLink } from 'react-router-dom';
+import OnboardingModal from '../components/OnboardingModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const Home = () => {
+  const { isAuthenticated, user } = useAuth();
   const [activeFeature, setActiveFeature] = useState(0);
   const [visibleSections, setVisibleSections] = useState({
     workflow: false,
     features: false
   });
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem('showOnboardingDismissed') === 'true';
+    const missingHealthData = isAuthenticated && user && (!user.weight || !user.height || !Array.isArray(user.conditions));
+    setShowOnboarding(!!missingHealthData && !dismissed);
+  }, [isAuthenticated, user]);
+
+  const handleOnboardingClose = () => {
+    setShowOnboarding(false);
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -93,6 +109,9 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFF5F8] via-white to-[#FFF0F5] overflow-x-hidden">
+      {showOnboarding && (
+        <OnboardingModal onClose={handleOnboardingClose} />
+      )}
       <div className="container mx-auto px-4 py-16 md:py-24">
         {/* Hero Section */}
         <div className="text-center max-w-4xl mx-auto mb-16">
@@ -110,7 +129,7 @@ const Home = () => {
           </p>
           
           {/* Call to Action Buttons */}
-          <div className="flex justify-center space-x-4">
+          <div className="flex flex-wrap justify-center gap-4">
             <NavLink 
               to="/scan"
               className="flex items-center gap-2 
@@ -120,7 +139,7 @@ const Home = () => {
               hover:scale-105 hover:shadow-xl 
               shadow-[#FF4081]/30 transform"
             >
-              Scan Food Label
+              Upload Food Label
             </NavLink>
             <NavLink 
               to="/manual-entry"
@@ -132,6 +151,30 @@ const Home = () => {
               shadow-md"
             >
               Manual Entry
+            </NavLink>
+            <NavLink
+              to="/ai-diet-planner"
+              className="flex items-center gap-2
+              bg-white border border-pink-200
+              text-[#F50057] font-semibold py-3.5 px-7
+              rounded-full transition-all duration-300
+              hover:bg-pink-50 hover:scale-105
+              shadow-md"
+            >
+              <Sparkles className="w-5 h-5" />
+              AI Diet Planner
+            </NavLink>
+            <NavLink
+              to="/diet-logger"
+              className="flex items-center gap-2
+              bg-white border border-pink-200
+              text-[#F50057] font-semibold py-3.5 px-7
+              rounded-full transition-all duration-300
+              hover:bg-pink-50 hover:scale-105
+              shadow-md"
+            >
+              <ClipboardList className="w-5 h-5" />
+              Diet Logger
             </NavLink>
           </div>
         </div>

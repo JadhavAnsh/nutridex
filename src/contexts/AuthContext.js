@@ -1,8 +1,69 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
-import axios from 'axios';
+import { useClerk, useAuth as useClerkAuth, useUser } from '@clerk/react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import axiosInstance, { setAuthTokenGetter } from '../api/axios';
 
 const AuthContext = createContext(null);
-const BACKEND_URL = 'http://localhost:8000';
+const PLACEHOLDER_EMAIL_SUFFIX = '@clerk.local';
+const PLACEHOLDER_NAME_PATTERN = /^user_[A-Za-z0-9]+$/;
+
+const isPlaceholderEmail = (email) =>
+  !email || email.toLowerCase().endsWith(PLACEHOLDER_EMAIL_SUFFIX);
+
+const isPlaceholderName = (fullName, clerkId) => {
+  if (!fullName) {
+    return true;
+  }
+
+  const normalizedName = fullName.trim();
+  return normalizedName === clerkId || PLACEHOLDER_NAME_PATTERN.test(normalizedName);
+};
+
+const getClerkIdentity = (clerkUser) => {
+  if (!clerkUser) {
+    return {};
+  }
+
+  const email =
+    clerkUser.primaryEmailAddress?.emailAddress ||
+    clerkUser.emailAddresses?.[0]?.emailAddress ||
+    null;
+  const fullName =
+    clerkUser.fullName ||
+    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') ||
+    clerkUser.firstName ||
+    null;
+
+  return {
+    email: email ? email.trim().toLowerCase() : null,
+    full_name: fullName ? fullName.trim() : null,
+    clerk_id: clerkUser.id || null,
+    clerk_created_at: clerkUser.createdAt ? new Date(clerkUser.createdAt).toISOString() : null,
+  };
+};
+
+const mergeUserProfile = (profile = {}, clerkIdentity = {}) => ({
+  ...profile,
+  full_name: clerkIdentity.full_name || profile?.full_name || null,
+  email: clerkIdentity.email || profile?.email || null,
+  clerk_id: profile?.clerk_id || clerkIdentity.clerk_id || null,
+  clerk_created_at: profile?.clerk_created_at || clerkIdentity.clerk_created_at || null,
+});
+
+const shouldSyncIdentity = (profile, clerkIdentity) => {
+  if (!profile || (!clerkIdentity.email && !clerkIdentity.full_name)) {
+    return false;
+  }
+
+  const emailNeedsSync =
+    !!clerkIdentity.email &&
+    (isPlaceholderEmail(profile.email) || profile.email?.toLowerCase() !== clerkIdentity.email);
+  const fullNameNeedsSync =
+    !!clerkIdentity.full_name &&
+    (isPlaceholderName(profile.full_name, clerkIdentity.clerk_id) ||
+      profile.full_name !== clerkIdentity.full_name);
+
+  return emailNeedsSync || fullNameNeedsSync;
+};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -13,95 +74,109 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isLoaded: isAuthLoaded, isSignedIn, getToken } = useClerkAuth();
+  const { isLoaded: isUserLoaded, user: clerkUser } = useUser();
+  const { signOut } = useClerk();
+  const clerkIdentity = useMemo(() => getClerkIdentity(clerkUser), [clerkUser]);
+  const isClerkReady = isAuthLoaded && isUserLoaded;
+
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
-  const [authUpdate, setAuthUpdate] = useState(0);
 
-  const checkAuth = useCallback(() => {
-    const accessToken = localStorage.getItem('accessToken');
-    const userData = localStorage.getItem('user');
-    
-    if (accessToken && userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-      } catch (err) {
-        console.error('Error parsing stored user data', err);
-        handleLogout();
-      }
-    } else {
-      handleLogout();
+  const hydrateProfile = useCallback(async () => {
+    if (!isClerkReady) {
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    if (!isSignedIn) {
+      setUser(null);
+      setError(null);
+      return;
+    }
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    setUser(null);
-    setIsAuthenticated(false);
-    delete axios.defaults.headers.common['Authorization'];
-  }, []);
-
-  const login = async (email, password) => {
     setLoading(true);
-    setError(null);
-    
     try {
-      const response = await fetch(`${BACKEND_URL}/login/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+      const token = await getToken();
+      if (!token) {
+        setUser(mergeUserProfile({}, clerkIdentity));
+        setError(null);
+        return;
       }
 
-      // Store tokens and user data
-      localStorage.setItem('accessToken', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      const response = await axiosInstance.get('/profile/');
+      let profile = response.data;
 
-      // Update state
-      setUser(data.user);
-      setIsAuthenticated(true);
+      if (shouldSyncIdentity(profile, clerkIdentity)) {
+        try {
+          const syncPayload = {};
+          if (clerkIdentity.email) {
+            syncPayload.email = clerkIdentity.email;
+          }
+          if (clerkIdentity.full_name) {
+            syncPayload.full_name = clerkIdentity.full_name;
+          }
 
-      // Set default axios header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.access}`;
+          if (Object.keys(syncPayload).length > 0) {
+            const syncResponse = await axiosInstance.patch('/profile/', syncPayload);
+            profile = syncResponse.data;
+          }
+        } catch (syncError) {
+          console.error('Profile identity sync error:', syncError);
+        }
+      }
 
-      setAuthUpdate(prev => prev + 1);
-
-      return true;
+      setUser(mergeUserProfile(profile, clerkIdentity));
+      setError(null);
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Failed to login. Please check your credentials.');
-      return false;
+      console.error('Profile hydration error:', err);
+      setError('Failed to fetch user profile');
+      setUser(mergeUserProfile({}, clerkIdentity));
     } finally {
       setLoading(false);
     }
-  };
+  }, [clerkIdentity, getToken, isClerkReady, isSignedIn]);
+
+  useEffect(() => {
+    setAuthTokenGetter(isClerkReady && isSignedIn ? getToken : null);
+  }, [getToken, isClerkReady, isSignedIn]);
+
+  useEffect(() => {
+    hydrateProfile();
+  }, [hydrateProfile]);
+
+  const checkAuth = useCallback(async () => {
+    await hydrateProfile();
+  }, [hydrateProfile]);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('userHealthProfile');
+    localStorage.removeItem('showOnboardingDismissed');
+    signOut();
+    setUser(null);
+  }, [signOut]);
+
+  const updateProfile = useCallback((updatedUser) => {
+    setUser((currentUser) => mergeUserProfile({ ...currentUser, ...updatedUser }, clerkIdentity));
+    if (updatedUser.weight || updatedUser.conditions) {
+      localStorage.setItem('userHealthProfile', JSON.stringify({
+        weight: updatedUser.weight,
+        height: updatedUser.height,
+        bmi: updatedUser.bmi,
+        conditions: updatedUser.conditions
+      }));
+    }
+  }, [clerkIdentity]);
 
   const value = {
-    isAuthenticated,
+    isClerkReady,
+    isAuthenticated: !!isSignedIn,
     user,
     loading,
     error,
-    login,
     logout: handleLogout,
-    checkAuth
+    checkAuth,
+    updateProfile
   };
 
   return (

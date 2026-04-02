@@ -1,5 +1,4 @@
-import React from 'react';
-import { FiGithub, FiMail, FiInstagram, FiAlertCircle } from 'react-icons/fi';
+import { FiAlertCircle } from 'react-icons/fi';
 
 export default function Footer() {
   return (
@@ -16,7 +15,7 @@ export default function Footer() {
         </div>
 
         {/* Social Links */}
-        <div className="flex justify-center space-x-6 ">
+        {/* <div className="flex justify-center space-x-6 ">
           <a href="https://github.com/chirag-patil625/Nutridex" className="text-gray-500 hover:text-[#FF4081] transition-colors">
             <FiGithub className="w-6 h-6" />
           </a>
@@ -26,7 +25,7 @@ export default function Footer() {
           <a href="https://www.instagram.com/chiragggg_fit/" className="text-gray-500 hover:text-[#FF4081] transition-colors">
             <FiInstagram className="w-6 h-6" />
           </a>
-        </div>
+        </div> */}
       </div>
     </footer>
   );

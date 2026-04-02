@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Edit, CheckCircle, X } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axios';
+import { useAuth } from '../contexts/AuthContext';
 
 const ManualEntry = () => {
+  const { isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     calories: '',
     protein: '',
@@ -30,6 +32,10 @@ const ManualEntry = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: '/manual-entry' } });
+      return;
+    }
     setIsProcessing(true);
     
     try {
@@ -100,6 +106,11 @@ const ManualEntry = () => {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Enter nutrition facts manually for precise analysis
           </p>
+          {!isAuthenticated && (
+            <p className="mt-3 text-sm text-[#F50057]">
+              Guests can fill this form. Sign in is required only when you submit the analysis.
+            </p>
+          )}
         </div>
 
         <form 

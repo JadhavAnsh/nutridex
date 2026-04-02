@@ -1,9 +1,10 @@
 import {
-    Camera,
-    CheckCircle,
-    Microscope,
-    Search,
-    ShieldCheck,
+  Camera,
+  CheckCircle,
+  Sparkles,
+  Microscope,
+  Search,
+  ShieldCheck,
     TrendingUp as Trend,
     TrendingUp
 } from 'lucide-react';
@@ -127,7 +128,7 @@ const Home = () => {
           </p>
           
           {/* Call to Action Buttons */}
-          <div className="flex justify-center space-x-4">
+          <div className="flex flex-wrap justify-center gap-4">
             <NavLink 
               to="/scan"
               className="flex items-center gap-2 
@@ -150,7 +151,22 @@ const Home = () => {
             >
               Manual Entry
             </NavLink>
+            <NavLink
+              to="/ai-diet-planner"
+              className="flex items-center gap-2
+              bg-white border border-pink-200
+              text-[#F50057] font-semibold py-3.5 px-7
+              rounded-full transition-all duration-300
+              hover:bg-pink-50 hover:scale-105
+              shadow-md"
+            >
+              <Sparkles className="w-5 h-5" />
+              AI Diet Planner
+            </NavLink>
           </div>
+          <p className="mt-4 text-sm text-gray-500">
+            Guests can explore the scanner, manual entry, and AI diet planner before signing in.
+          </p>
         </div>
 
         {/* Stair-like Workflow Section */}

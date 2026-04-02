@@ -3,6 +3,7 @@ import './App.css';
 import BaseLayout from './BaseLayout';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './contexts/AuthContext';
+import AIDietPlanner from './pages/AIDietPlanner';
 import History from './pages/History';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -21,8 +22,9 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/scan" element={<PrivateRoute><Scan /></PrivateRoute>} />
-            <Route path="/manual-entry" element={<PrivateRoute><ManualEntry /></PrivateRoute>} />
+            <Route path="/scan" element={<Scan />} />
+            <Route path="/manual-entry" element={<ManualEntry />} />
+            <Route path="/ai-diet-planner" element={<AIDietPlanner />} />
             <Route path="/result" element={<PrivateRoute><Result /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
             <Route path="/history" element={<PrivateRoute><History /></PrivateRoute>} />

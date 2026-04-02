@@ -10,21 +10,18 @@ import {
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axios';
+import { useAuth } from '../contexts/AuthContext';
 
 // Import example images (you'll need to replace these with actual paths)
 import ingredientsExample from '../assests/ingredients.png';
 import nutritionExample from '../assests/nutritionfacts.jpg';
 
 const Scan = () => {
+  const { isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('image'); // 'image' or 'barcode'
-  const [inputMethod, setInputMethod] = useState('upload');
   const [nutritionImage, setNutritionImage] = useState(null);
   const [ingredientsImage, setIngredientsImage] = useState(null);
-  const [textInput, setTextInput] = useState({
-    ingredients: '',
-    nutrition: ''
-  });
-  
+
   // Barcode specific state
   const [barcodeString, setBarcodeString] = useState('');
   const [barcodeImage, setBarcodeImage] = useState(null);
@@ -130,6 +127,10 @@ const Scan = () => {
   );
 
   const handleAnalyze = async () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: '/scan' } });
+      return;
+    }
     if (!nutritionImage || !ingredientsImage) {
       alert('Please upload both nutrition facts and ingredients images');
       return;
@@ -159,6 +160,10 @@ const Scan = () => {
   };
 
   const handleBarcodeAnalyze = async () => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: '/scan' } });
+      return;
+    }
     if (!barcodeString && !barcodeImage) {
       alert('Please enter a barcode or upload a barcode image');
       return;
@@ -227,6 +232,11 @@ const Scan = () => {
           <p className="text-xl text-gray-700 max-w-2xl mx-auto">
             Scan your food item for intelligent nutritional analysis
           </p>
+          {!isAuthenticated && (
+            <p className="mt-3 text-sm text-[#F50057]">
+              Guests can open this page and prepare inputs. Sign in is required when you run the analysis.
+            </p>
+          )}
         </div>
 
         {/* Tabs */}

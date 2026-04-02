@@ -9,6 +9,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import './index.css';
 import Chat from './pages/Chat';
 import History from './pages/History';
+import AIDietPlanner from './pages/AIDietPlanner';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import ManualEntry from './pages/ManualEntry';
@@ -40,11 +41,15 @@ const router = createBrowserRouter([
       },
       {
         path: '/scan',
-        element: <PrivateRoute><Scan /></PrivateRoute>,
+        element: <Scan />,
       },
       {
         path: '/manual-entry',
-        element: <PrivateRoute><ManualEntry /></PrivateRoute>,
+        element: <ManualEntry />,
+      },
+      {
+        path: '/ai-diet-planner',
+        element: <AIDietPlanner />,
       },
       {
         path: '/chat',

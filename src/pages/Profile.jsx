@@ -32,6 +32,7 @@ export default function Profile() {
   const [profileData, setProfileData] = useState(null);
   const [historyData, setHistoryData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -92,12 +93,14 @@ export default function Profile() {
 
     const fetchHistory = async () => {
       try {
-        const response = await axiosInstance.get('/user-history/');
+        const response = await axiosInstance.get('/user-history/?limit=5&include_ai=0');
         if (response.data.success) {
           setHistoryData(response.data.history);
         }
       } catch (err) {
         console.error('History fetch error:', err);
+      } finally {
+        setHistoryLoading(false);
       }
     };
 
@@ -262,10 +265,22 @@ export default function Profile() {
                 <h3 className="font-semibold">Recent Activity</h3>
               </div>
               <div className="space-y-3">
-                {historyData.length === 0 ? (
+                {historyLoading ? (
+                  <div className="space-y-3">
+                    {[...Array(3)].map((_, index) => (
+                      <div
+                        key={index}
+                        className="w-full rounded-lg border border-pink-100 bg-white p-3 animate-pulse"
+                      >
+                        <div className="h-4 w-40 rounded bg-pink-100" />
+                        <div className="mt-2 h-3 w-28 rounded bg-pink-50" />
+                      </div>
+                    ))}
+                  </div>
+                ) : historyData.length === 0 ? (
                   <p className="text-center text-gray-600">No recent activity</p>
                 ) : (
-                  historyData.slice(0, 5).map((item) => (
+                  historyData.map((item) => (
                     <button
                       key={item.id}
                       onClick={() => handleHistoryClick(item)}

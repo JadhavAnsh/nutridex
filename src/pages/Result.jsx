@@ -145,6 +145,16 @@ const formatScore = (score) => {
   return score.toFixed(1);
 };
 
+const formatDisplayDate = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const day = date.getDate();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 const normalizeKey = (key) => key.toLowerCase().replace(/\s+/g, '_');
 
 const getNutritionValue = (nutritionData, keys) => {
@@ -557,6 +567,7 @@ export default function Result() {
   const productName = analysisData?.product_name || 'Analyzed Product';
   const productBrand = analysisData?.product_brand;
   const analysisTimestamp = analysisData?.timestamp;
+  const displayAnalysisDate = formatDisplayDate(analysisTimestamp);
   const summaryContent = buildStructuredSummary({
     analysisData,
     scoreDetails,
@@ -565,11 +576,31 @@ export default function Result() {
     dietType,
     healthProfile,
   });
-
   const ingredientRows = ingredientsList.map((ingredient) => ({
     name: ingredient,
     ...getIngredientStatus(ingredient, healthProfile),
   }));
+  const aiAnalysis = analysisData?.ai_analysis || {};
+  const finalDietType = aiAnalysis?.diet_type?.label ? aiAnalysis.diet_type : dietType;
+  const finalVerdict = aiAnalysis?.overall_verdict?.title ? aiAnalysis.overall_verdict : verdict;
+  const finalVerdictTone = scoreToneMap[finalVerdict.tone] || verdictTone;
+  const finalSummary = aiAnalysis?.summary?.headline ? aiAnalysis.summary : summaryContent;
+  const finalInsights = Array.isArray(aiAnalysis?.health_insights) && aiAnalysis.health_insights.length > 0
+    ? aiAnalysis.health_insights.map((item) => ({
+        label: item.label,
+        type: item.tone === 'good' ? 'good' : 'warning',
+        text: item.text,
+      }))
+    : personalInsights;
+  const finalIngredientRows =
+    Array.isArray(aiAnalysis?.ingredient_analysis) && aiAnalysis.ingredient_analysis.length > 0
+      ? aiAnalysis.ingredient_analysis.map((item) => ({
+          name: item.name,
+          tone: item.tone === 'good' ? 'good' : 'warning',
+          label: item.label,
+          reason: item.reason,
+        }))
+      : ingredientRows;
 
   const chartEntries = Object.entries(nutritionData).filter(([, value]) => {
     const parsed = Number(value);
@@ -627,7 +658,7 @@ export default function Result() {
                       <FiClock className="h-4 w-4" />
                       Analyzed
                     </div>
-                    <p className="mt-1 text-sm font-medium text-white">{analysisTimestamp}</p>
+                    <p className="mt-1 text-sm font-medium text-white">{displayAnalysisDate}</p>
                   </div>
                 )}
               </div>
@@ -682,16 +713,16 @@ export default function Result() {
             </div>
 
             <div className="space-y-5">
-              <div className={`rounded-3xl border p-5 ${verdictTone.card}`}>
+              <div className={`rounded-3xl border p-5 ${finalVerdictTone.card}`}>
                 <div className="flex items-start gap-3">
-                  <FiShield className={`mt-1 h-5 w-5 flex-shrink-0 ${verdictTone.icon}`} />
+                  <FiShield className={`mt-1 h-5 w-5 flex-shrink-0 ${finalVerdictTone.icon}`} />
                   <div>
-                    <p className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${verdictTone.badge}`}>
+                    <p className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${finalVerdictTone.badge}`}>
                       Overall Recommendation
                     </p>
-                    <h2 className={`mt-3 text-2xl font-semibold ${verdictTone.text}`}>{summaryContent.headline}</h2>
-                    <p className={`mt-2 text-sm ${verdictTone.text}`}>{verdict.text}</p>
-                    <p className="mt-3 text-sm text-gray-700">{dietType.reason}</p>
+                    <h2 className={`mt-3 text-2xl font-semibold ${finalVerdictTone.text}`}>{finalSummary.headline}</h2>
+                    <p className={`mt-2 text-sm ${finalVerdictTone.text}`}>{finalVerdict.text}</p>
+                    <p className="mt-3 text-sm text-gray-700">{finalDietType.reason}</p>
                   </div>
                 </div>
               </div>
@@ -703,7 +734,7 @@ export default function Result() {
                     Analysis Summary
                   </h2>
                 </div>
-                <p className="mt-4 leading-7 text-gray-700">{summaryContent.intro}</p>
+                <p className="mt-4 leading-7 text-gray-700">{finalSummary.intro}</p>
                 <div className="mt-5 grid gap-4 md:grid-cols-2">
                   <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
                     <div className="flex items-center gap-2 text-emerald-700">
@@ -711,8 +742,8 @@ export default function Result() {
                       <h3 className="font-semibold">What Looks Good</h3>
                     </div>
                     <div className="mt-3 space-y-2">
-                      {summaryContent.positives.length > 0 ? (
-                        summaryContent.positives.map((item, index) => (
+                      {finalSummary.positives.length > 0 ? (
+                        finalSummary.positives.map((item, index) => (
                           <p key={`${item}-${index}`} className="text-sm text-emerald-700">
                             {item}
                           </p>
@@ -728,8 +759,8 @@ export default function Result() {
                       <h3 className="font-semibold">Main Concerns</h3>
                     </div>
                     <div className="mt-3 space-y-2">
-                      {summaryContent.concerns.length > 0 ? (
-                        summaryContent.concerns.map((item, index) => (
+                      {finalSummary.concerns.length > 0 ? (
+                        finalSummary.concerns.map((item, index) => (
                           <p key={`${item}-${index}`} className="text-sm text-red-700">
                             {item}
                           </p>
@@ -748,8 +779,8 @@ export default function Result() {
                     <FiTag className="h-5 w-5" />
                     <h3 className="text-lg font-semibold">Diet Classification</h3>
                   </div>
-                  <p className="mt-4 text-2xl font-bold text-gray-900">{dietType.label}</p>
-                  <p className="mt-2 text-sm text-gray-600">{dietType.reason}</p>
+                  <p className="mt-4 text-2xl font-bold text-gray-900">{finalDietType.label}</p>
+                  <p className="mt-2 text-sm text-gray-600">{finalDietType.reason}</p>
                 </div>
 
                 <div className="rounded-3xl border border-pink-100 bg-white p-5 shadow-sm">
@@ -758,7 +789,7 @@ export default function Result() {
                     <h3 className="text-lg font-semibold">Session Info</h3>
                   </div>
                   <p className="mt-4 text-sm text-gray-700">
-                    {analysisTimestamp ? `Generated on ${analysisTimestamp}.` : 'Latest analysis loaded from this session.'}
+                    {displayAnalysisDate ? `Generated on ${displayAnalysisDate}.` : 'Latest analysis loaded from this session.'}
                   </p>
                   <p className="mt-2 text-sm text-gray-600">
                     Ingredient and nutrition scores are shown separately so you can see what is helping or hurting the product.
@@ -769,7 +800,7 @@ export default function Result() {
           </div>
         </div>
 
-        {personalInsights.length > 0 && (
+        {finalInsights.length > 0 && (
           <div className="rounded-3xl border border-pink-100 bg-white p-6 shadow-lg">
             <div className="flex items-center gap-2">
               <FiUser className="h-5 w-5 text-[#FF4081]" />
@@ -780,13 +811,13 @@ export default function Result() {
             <p className="mt-2 text-sm text-gray-600">
               These insights are based on the health conditions saved in your profile.
             </p>
-            <div className={`mt-4 rounded-2xl border p-4 ${verdictTone.card}`}>
-              <p className={`text-sm font-semibold ${verdictTone.text}`}>
-                Overall summary for you: {summaryContent.recommendation}
+            <div className={`mt-4 rounded-2xl border p-4 ${finalVerdictTone.card}`}>
+              <p className={`text-sm font-semibold ${finalVerdictTone.text}`}>
+                Overall summary for you: {finalSummary.recommendation}
               </p>
             </div>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              {personalInsights.map((insight, index) => {
+              {finalInsights.map((insight, index) => {
                 const tone = scoreToneMap[insight.type === 'good' ? 'good' : 'warning'];
                 return (
                   <div key={`${insight.label}-${index}`} className={`rounded-2xl border p-4 shadow-sm ${tone.card}`}>
@@ -826,8 +857,8 @@ export default function Result() {
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
-              {ingredientRows.length > 0 ? (
-                ingredientRows.map((ingredient, index) => {
+              {finalIngredientRows.length > 0 ? (
+                finalIngredientRows.map((ingredient, index) => {
                   const tone = scoreToneMap[ingredient.tone === 'warning' ? 'warning' : 'good'];
                   return (
                     <div

@@ -1,4 +1,4 @@
-import { UserButton, useAuth, useUser } from '@clerk/react';
+import { useAuth, useUser } from '@clerk/react';
 import { Menu, User, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -89,11 +89,6 @@ export default function Navbar() {
               </>
             )}
 
-            {isLoaded && user ? (
-              <div className="rounded-full border border-pink-100 bg-white p-0.5 shadow-sm">
-                <UserButton afterSignOutUrl="/" />
-              </div>
-            ) : null}
           </div>
         </div>
 
@@ -116,9 +111,6 @@ export default function Navbar() {
                       {displayName}
                     </span>
                   </NavLink>
-                  <div className="pb-2">
-                    <UserButton afterSignOutUrl="/" />
-                  </div>
                 </>
               ) : (
                 <>

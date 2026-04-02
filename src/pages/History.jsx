@@ -7,12 +7,29 @@ import { useAuth } from '../contexts/AuthContext';
 // Register ChartJS components
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+const toNumberOrNull = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getIngredientsList = (historyData) => {
+  if (Array.isArray(historyData?.ingredients_data?.raw_data)) {
+    return historyData.ingredients_data.raw_data;
+  }
+
+  if (Array.isArray(historyData?.ingredients_data?.ingredients)) {
+    return historyData.ingredients_data.ingredients;
+  }
+
+  return [];
+};
+
 function getHistoryInsights(historyData, profile) {
   if (!profile || !historyData) return [];
   // Normalise History's flat nutrition_data to match the insights helper format
   const fakeAnalysis = {
     total_score: historyData.scores.total,
-    ingredients: { raw_data: historyData.ingredients_data?.raw_data || [] },
+    ingredients: { raw_data: getIngredientsList(historyData) },
     nutrition: { data: historyData.nutrition_data || {} }
   };
   const n = fakeAnalysis.nutrition.data;
@@ -80,12 +97,21 @@ export default function History() {
     return <Navigate to="/profile" replace />;
   }
 
+  const totalScore = toNumberOrNull(historyData?.scores?.total);
+  const ingredientsScore = toNumberOrNull(historyData?.scores?.ingredients);
+  const ingredientsList = getIngredientsList(historyData);
+  const nutritionData = historyData?.nutrition_data || {};
+
   const formatScore = (score) => {
+    if (!Number.isFinite(score)) {
+      return 'N/A';
+    }
     return score.toFixed(1);
   };
 
   const calculateCircleProgress = (score) => {
-    const normalizedScore = Math.min(Math.max(score, 0), 100); // Ensure score is between 0 and 100
+    const safeScore = Number.isFinite(score) ? score : 0;
+    const normalizedScore = Math.min(Math.max(safeScore, 0), 100); // Ensure score is between 0 and 100
     const circumference = 2 * Math.PI * 58;
     const offset = circumference - (normalizedScore / 100) * circumference;
     return { offset, circumference };
@@ -123,8 +149,8 @@ export default function History() {
     }
   };
 
-  const { offset, circumference } = calculateCircleProgress(historyData.scores.total);
-  const scoreDetails = getScoreDetails(historyData.scores.total);
+  const { offset, circumference } = calculateCircleProgress(totalScore);
+  const scoreDetails = getScoreDetails(totalScore ?? 0);
 
   // Personalized health insights
   const healthProfile = user?.weight ? {
@@ -140,11 +166,11 @@ export default function History() {
 
   // Prepare data for pie chart
   const nutritionChartData = {
-    labels: Object.keys(historyData.nutrition_data).map(key => 
+    labels: Object.keys(nutritionData).map(key => 
       key.replace(/_/g, ' ')
     ),
     datasets: [{
-      data: Object.values(historyData.nutrition_data),
+      data: Object.values(nutritionData),
       backgroundColor: [
         'rgb(255, 99, 71)',     // Tomato Red
         'rgb(30, 144, 255)',    // Dodger Blue
@@ -221,11 +247,11 @@ export default function History() {
                 cx="64"
                 cy="64"
               />
-            </svg>
-            <span className="absolute text-3xl font-bold text-gray-800">
-              {formatScore(historyData.scores.total)}%
-            </span>
-          </div>
+              </svg>
+              <span className="absolute text-3xl font-bold text-gray-800">
+                {formatScore(totalScore)}{Number.isFinite(totalScore) ? '%' : ''}
+              </span>
+            </div>
           <div className="mt-4">
             <p className={`text-lg font-semibold ${scoreDetails.color}`}>
               {scoreDetails.category}
@@ -296,25 +322,28 @@ export default function History() {
               <p className="text-gray-700 font-medium mb-2">Ingredients Score</p>
               <div className="flex items-baseline">
                 <span className="text-4xl md:text-5xl font-bold text-[#FF4081]">
-                  {formatScore(historyData.scores.ingredients)}
+                  {formatScore(ingredientsScore)}
                 </span>
-                <span className="text-sm text-gray-400 ml-1 mt-2">/100</span>
+                <span className="text-sm text-gray-400 ml-1 mt-2">{Number.isFinite(ingredientsScore) ? '/100' : ''}</span>
               </div>
               <div className="mt-3 w-full bg-gray-200 rounded-full h-2.5">
                 <div 
                   className="bg-[#FF4081] h-2.5 rounded-full transition-all duration-700 ease-in-out"
-                  style={{ width: `${historyData.scores.ingredients}%` }}
+                  style={{ width: `${Math.min(Math.max(ingredientsScore ?? 0, 0), 100)}%` }}
                 ></div>
               </div>
             </div>
             <div className="space-y-4">
-              {historyData.ingredients_data.raw_data.map((ingredient, index) => (
+              {ingredientsList.map((ingredient, index) => (
                 <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-pink-50 hover:bg-pink-100 transition-colors">
                   <div>
                     <h3 className="font-medium text-gray-900">{ingredient}</h3>
                   </div>
                 </div>
               ))}
+              {ingredientsList.length === 0 && (
+                <p className="text-gray-500">No ingredient details available for this history entry.</p>
+              )}
             </div>
           </div>
 
@@ -333,7 +362,7 @@ export default function History() {
 
             {/* Existing nutrition facts table */}
             <div className="space-y-3">
-              {Object.entries(historyData.nutrition_data).map(([key, value]) => (
+              {Object.entries(nutritionData).map(([key, value]) => (
                 <div key={key} className="flex justify-between py-2 border-b border-pink-200">
                   <span className="text-gray-600 capitalize">
                     {key.replace(/_/g, ' ')}
@@ -341,6 +370,9 @@ export default function History() {
                   <span className="font-medium text-[#FF4081]">{value}</span>
                 </div>
               ))}
+              {Object.keys(nutritionData).length === 0 && (
+                <p className="text-gray-500">No nutrition details available for this history entry.</p>
+              )}
             </div>
           </div>
         </div>

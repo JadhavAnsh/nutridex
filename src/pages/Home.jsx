@@ -1,11 +1,11 @@
 import {
-  Camera,
-  CheckCircle,
-  Microscope,
-  Search,
-  ShieldCheck,
-  TrendingUp as Trend,
-  TrendingUp
+    Camera,
+    CheckCircle,
+    Microscope,
+    Search,
+    ShieldCheck,
+    TrendingUp as Trend,
+    TrendingUp
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';

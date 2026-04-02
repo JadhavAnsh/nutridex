@@ -14,7 +14,7 @@ const CONDITIONS = [
 ];
 
 export default function Profile() {
-  const { user, logout, updateProfile } = useAuth();
+  const { user, logout, updateProfile, isAuthenticated, isClerkReady } = useAuth();
   const [profileData, setProfileData] = useState(null);
   const [historyData, setHistoryData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +27,8 @@ export default function Profile() {
     conditions: [],
   });
   const navigate = useNavigate();
+  const displayFullName = user?.full_name || profileData?.full_name || 'Your Profile';
+  const displayEmail = user?.email || profileData?.email || '';
 
   const bmiPreview = useMemo(() => {
     const w = parseFloat(formData.weight);
@@ -39,10 +41,15 @@ export default function Profile() {
   }, [formData.height, formData.weight]);
 
   useEffect(() => {
+    if (!isClerkReady || !isAuthenticated || !user) {
+      return;
+    }
+
     const fetchProfile = async () => {
       try {
         const response = await axiosInstance.get('/profile/');
         setProfileData(response.data);
+        setError('');
         setFormData({
           weight: response.data?.weight ?? '',
           height: response.data?.height ?? '',
@@ -69,7 +76,7 @@ export default function Profile() {
 
     fetchProfile();
     fetchHistory();
-  }, []);
+  }, [isAuthenticated, isClerkReady, user]);
 
   const handleConditionToggle = (key) => {
     setFormData((prev) => ({
@@ -119,11 +126,11 @@ export default function Profile() {
             <div className="px-8 pt-20 pb-24 text-white">
               <div className="flex items-center space-x-4">
                 <div className="w-24 h-24 bg-white rounded-2xl shadow-lg flex items-center justify-center text-4xl text-[#FF4081] font-bold">
-                  {user?.full_name?.[0]?.toUpperCase() || 'U'}
+                  {displayFullName?.[0]?.toUpperCase() || 'U'}
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold">{user?.full_name || 'Your Profile'}</h1>
-                  <p className="text-pink-100 mt-1">{user?.email}</p>
+                  <h1 className="text-3xl font-bold">{displayFullName}</h1>
+                  <p className="text-pink-100 mt-1">{displayEmail}</p>
                 </div>
               </div>
             </div>
@@ -144,11 +151,11 @@ export default function Profile() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm text-gray-500">Full Name</label>
-                    <p className="text-gray-800 font-medium mt-1">{profileData?.full_name || user?.full_name}</p>
+                    <p className="text-gray-800 font-medium mt-1">{displayFullName}</p>
                   </div>
                   <div>
                     <label className="text-sm text-gray-500">Email Address</label>
-                    <p className="text-gray-800 font-medium mt-1">{profileData?.email || user?.email}</p>
+                    <p className="text-gray-800 font-medium mt-1">{displayEmail}</p>
                   </div>
                   <div>
                     <label className="text-sm text-gray-500">Member Since</label>

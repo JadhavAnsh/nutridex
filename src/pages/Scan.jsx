@@ -30,6 +30,10 @@ const Scan = () => {
   const navigate = useNavigate();
 
   const handleImageUpload = (file, type) => {
+    if (!file) {
+      return;
+    }
+
     const reader = new FileReader();
     reader.onloadend = () => {
       if (type === 'nutrition') {
@@ -89,27 +93,40 @@ const Scan = () => {
             </button>
           </div>
         ) : (
-          <label className="cursor-pointer flex flex-col items-center w-full h-full justify-center">
+          <div className="flex flex-col items-center w-full h-full justify-center">
             <Camera className="w-16 h-16 text-[#FF4081] mb-4"/>
             <p className="text-xl font-semibold text-gray-700 mb-2">
               Upload {title}
             </p>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-gray-500 mb-5">
               Supported formats: PNG, JPG, JPEG
             </p>
-            <input
-              type="file"
-              className="hidden"
-              accept="image/*"
-              onChange={(e) => handleImageUpload(e.target.files[0], type)}
-            />
-            <div className="bg-gradient-to-r from-[#FF4081] to-[#F50057] 
-              text-white px-6 py-3 rounded-full 
-              flex items-center gap-2 
-              hover:scale-105 transition-transform">
-              <Upload className="w-5 h-5"/>
-              Upload Image
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <label className="cursor-pointer bg-gradient-to-r from-[#FF4081] to-[#F50057] text-white px-6 py-3 rounded-full flex items-center gap-2 hover:scale-105 transition-transform">
+                <Upload className="w-5 h-5"/>
+                Upload Image
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => handleImageUpload(e.target.files[0], type)}
+                />
+              </label>
+              <label className="cursor-pointer bg-white border border-pink-200 text-[#FF4081] px-6 py-3 rounded-full flex items-center gap-2 hover:bg-pink-50 transition-colors">
+                <Camera className="w-5 h-5"/>
+                Scan with Camera
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => handleImageUpload(e.target.files[0], type)}
+                />
+              </label>
             </div>
+            <p className="mt-3 text-xs text-gray-400">
+              On mobile, camera scan opens the back camera directly when supported.
+            </p>
             {exampleImage && (
               <>
                 <img 
@@ -120,7 +137,7 @@ const Scan = () => {
                 <p className="mt-2 text-xs text-gray-400">Example of {title.toLowerCase()} image</p>
               </>
             )}
-          </label>
+          </div>
         )}
       </div>
     </div>

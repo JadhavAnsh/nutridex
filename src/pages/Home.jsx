@@ -1,12 +1,12 @@
 import {
   Camera,
   CheckCircle,
-  Sparkles,
   Microscope,
   Search,
   ShieldCheck,
-    TrendingUp as Trend,
-    TrendingUp
+  Sparkles,
+  TrendingUp as Trend,
+  TrendingUp
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
@@ -164,9 +164,6 @@ const Home = () => {
               AI Diet Planner
             </NavLink>
           </div>
-          <p className="mt-4 text-sm text-gray-500">
-            Guests can explore the scanner, manual entry, and AI diet planner before signing in.
-          </p>
         </div>
 
         {/* Stair-like Workflow Section */}

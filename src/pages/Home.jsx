@@ -1,4 +1,5 @@
 import {
+  ClipboardList,
   Camera,
   CheckCircle,
   Microscope,
@@ -162,6 +163,18 @@ const Home = () => {
             >
               <Sparkles className="w-5 h-5" />
               AI Diet Planner
+            </NavLink>
+            <NavLink
+              to="/diet-logger"
+              className="flex items-center gap-2
+              bg-white border border-pink-200
+              text-[#F50057] font-semibold py-3.5 px-7
+              rounded-full transition-all duration-300
+              hover:bg-pink-50 hover:scale-105
+              shadow-md"
+            >
+              <ClipboardList className="w-5 h-5" />
+              Diet Logger
             </NavLink>
           </div>
         </div>

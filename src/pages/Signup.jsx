@@ -38,8 +38,6 @@ export default function Signup() {
               Nutridex
             </h1>
 
-            <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Create Your Account</h3>
-
             <div className="w-full flex justify-center">
               <SignUp/>
             </div>

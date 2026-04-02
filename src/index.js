@@ -10,6 +10,7 @@ import './index.css';
 import Chat from './pages/Chat';
 import History from './pages/History';
 import AIDietPlanner from './pages/AIDietPlanner';
+import DietLogger from './pages/DietLogger';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import ManualEntry from './pages/ManualEntry';
@@ -50,6 +51,10 @@ const router = createBrowserRouter([
       {
         path: '/ai-diet-planner',
         element: <AIDietPlanner />,
+      },
+      {
+        path: '/diet-logger',
+        element: <DietLogger />,
       },
       {
         path: '/chat',

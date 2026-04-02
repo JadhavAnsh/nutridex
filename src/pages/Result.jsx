@@ -12,6 +12,8 @@ import {
   FiUser,
 } from 'react-icons/fi';
 import { Navigate, useLocation } from 'react-router-dom';
+import DietTypeIndicator from '../components/DietTypeIndicator';
+import NutriScoreCard from '../components/NutriScoreCard';
 import { useAuth } from '../contexts/AuthContext';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -651,7 +653,9 @@ export default function Result() {
                     <FiTag className="h-4 w-4" />
                     Diet Type
                   </div>
-                  <p className="mt-1 text-lg font-semibold text-white">{dietType.label}</p>
+                  <div className="mt-2">
+                    <DietTypeIndicator label={finalDietType.label} compact />
+                  </div>
                 </div>
                 {analysisTimestamp && (
                   <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur-sm">
@@ -733,6 +737,8 @@ export default function Result() {
             </div>
 
             <div className="space-y-5">
+              <NutriScoreCard score={totalScore ?? 0} />
+
               <div className={`rounded-3xl border p-5 ${finalVerdictTone.card}`}>
                 <div className="flex items-start gap-3">
                   <FiShield className={`mt-1 h-5 w-5 flex-shrink-0 ${finalVerdictTone.icon}`} />
@@ -799,8 +805,9 @@ export default function Result() {
                     <FiTag className="h-5 w-5" />
                     <h3 className="text-lg font-semibold">Diet Classification</h3>
                   </div>
-                  <p className="mt-4 text-2xl font-bold text-gray-900">{finalDietType.label}</p>
-                  <p className="mt-2 text-sm text-gray-600">{finalDietType.reason}</p>
+                  <div className="mt-4">
+                    <DietTypeIndicator label={finalDietType.label} reason={finalDietType.reason} />
+                  </div>
                 </div>
 
                 <div className="rounded-3xl border border-pink-100 bg-white p-5 shadow-sm">

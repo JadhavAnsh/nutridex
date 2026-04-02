@@ -37,6 +37,7 @@ const getClerkIdentity = (clerkUser) => {
     email: email ? email.trim().toLowerCase() : null,
     full_name: fullName ? fullName.trim() : null,
     clerk_id: clerkUser.id || null,
+    clerk_created_at: clerkUser.createdAt ? new Date(clerkUser.createdAt).toISOString() : null,
   };
 };
 
@@ -45,6 +46,7 @@ const mergeUserProfile = (profile = {}, clerkIdentity = {}) => ({
   full_name: clerkIdentity.full_name || profile?.full_name || null,
   email: clerkIdentity.email || profile?.email || null,
   clerk_id: profile?.clerk_id || clerkIdentity.clerk_id || null,
+  clerk_created_at: profile?.clerk_created_at || clerkIdentity.clerk_created_at || null,
 });
 
 const shouldSyncIdentity = (profile, clerkIdentity) => {

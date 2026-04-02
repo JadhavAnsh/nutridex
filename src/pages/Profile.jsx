@@ -13,6 +13,20 @@ const CONDITIONS = [
   { key: 'obesity', label: 'Obesity / Weight Management' },
 ];
 
+const parseDateValue = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatHistoryScore = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? `${numericValue.toFixed(1)}%` : 'N/A';
+};
+
 export default function Profile() {
   const { user, logout, updateProfile, isAuthenticated, isClerkReady } = useAuth();
   const [profileData, setProfileData] = useState(null);
@@ -29,6 +43,19 @@ export default function Profile() {
   const navigate = useNavigate();
   const displayFullName = user?.full_name || profileData?.full_name || 'Your Profile';
   const displayEmail = user?.email || profileData?.email || '';
+  const backendJoinedAt = parseDateValue(profileData?.date_joined || user?.date_joined);
+  const clerkCreatedAt = parseDateValue(user?.clerk_created_at);
+  const memberSinceDate =
+    backendJoinedAt && clerkCreatedAt
+      ? new Date(Math.min(backendJoinedAt.getTime(), clerkCreatedAt.getTime()))
+      : backendJoinedAt || clerkCreatedAt;
+  const displayMemberSince = memberSinceDate
+    ? memberSinceDate.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : 'Unavailable';
 
   const bmiPreview = useMemo(() => {
     const w = parseFloat(formData.weight);
@@ -159,13 +186,7 @@ export default function Profile() {
                   </div>
                   <div>
                     <label className="text-sm text-gray-500">Member Since</label>
-                    <p className="text-gray-800 font-medium mt-1">
-                      {new Date(profileData?.date_joined || Date.now()).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </p>
+                    <p className="text-gray-800 font-medium mt-1">{displayMemberSince}</p>
                   </div>
                 </div>
               </div>
@@ -252,7 +273,7 @@ export default function Profile() {
                     >
                       <div className="flex justify-between items-center">
                         <div>
-                          <div className="font-medium text-gray-800">Analysis Score: {item.scores.total.toFixed(1)}%</div>
+                          <div className="font-medium text-gray-800">Analysis Score: {formatHistoryScore(item?.scores?.total)}</div>
                           <div className="text-sm text-gray-500">{new Date(item.created_at).toLocaleString()}</div>
                         </div>
                         <FiClock className="text-[#FF4081] w-5 h-5" />

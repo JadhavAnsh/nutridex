@@ -566,6 +566,7 @@ export default function Result() {
   const verdictTone = scoreToneMap[verdict.tone];
   const productName = analysisData?.product_name || 'Analyzed Product';
   const productBrand = analysisData?.product_brand;
+  const productImage = analysisData?.product_image || '';
   const analysisTimestamp = analysisData?.timestamp;
   const displayAnalysisDate = formatDisplayDate(analysisTimestamp);
   const summaryContent = buildStructuredSummary({
@@ -708,6 +709,25 @@ export default function Result() {
                 <div className="rounded-2xl bg-white p-4 shadow-sm border border-pink-100">
                   <p className="text-xs uppercase tracking-wide text-gray-500">Nutrition</p>
                   <p className="mt-1 text-2xl font-bold text-[#FF4081]">{formatScore(nutritionScore)}</p>
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-3xl border border-pink-100 bg-white p-4 shadow-sm">
+                <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50 flex items-center justify-center">
+                  {productImage ? (
+                    <img
+                      src={productImage}
+                      alt={productName}
+                      className="h-full w-full object-contain p-3"
+                    />
+                  ) : (
+                    <div className="px-6 text-center">
+                      <p className="text-sm font-semibold text-gray-700">Product image unavailable</p>
+                      <p className="mt-2 text-xs text-gray-500">
+                        Open Food Facts did not return a front image for this product.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

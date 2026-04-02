@@ -481,6 +481,10 @@ export default function History() {
   const nutritionScore = toNumberOrNull(historyData?.scores?.nutrition);
   const ingredientsList = getIngredientsList(historyData);
   const nutritionData = historyData?.nutrition_data || {};
+  const productMeta = historyData?.ingredients_data?.product_meta || {};
+  const productImage = productMeta?.image || '';
+  const productName = productMeta?.name || 'Saved Product';
+  const productBrand = productMeta?.brand || '';
   const scoreDetails = getScoreDetails(totalScore ?? 0);
   const { offset, circumference } = calculateCircleProgress(totalScore ?? 0);
   const dietType = getDietType(ingredientsList);
@@ -587,7 +591,7 @@ export default function History() {
                     <FiTag className="h-4 w-4" />
                     Diet Type
                   </div>
-                  <p className="mt-1 text-lg font-semibold text-white">{dietType.label}</p>
+                  <p className="mt-1 text-lg font-semibold text-white">{finalDietType.label}</p>
                 </div>
                 <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur-sm">
                   <div className="flex items-center gap-2 text-pink-100 text-sm">
@@ -638,6 +642,31 @@ export default function History() {
                   <p className="text-xs uppercase tracking-wide text-gray-500">Nutrition</p>
                   <p className="mt-1 text-2xl font-bold text-[#FF4081]">{formatScore(nutritionScore)}</p>
                 </div>
+              </div>
+
+              <div className="mt-6 rounded-3xl border border-pink-100 bg-white p-4 shadow-sm">
+                <div className="aspect-[4/5] overflow-hidden rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50 flex items-center justify-center">
+                  {productImage ? (
+                    <img
+                      src={productImage}
+                      alt={productName}
+                      className="h-full w-full object-contain p-3"
+                    />
+                  ) : (
+                    <div className="px-6 text-center">
+                      <p className="text-sm font-semibold text-gray-700">Product image unavailable</p>
+                      <p className="mt-2 text-xs text-gray-500">
+                        This saved entry does not include an Open Food Facts product image.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                {(productMeta?.name || productMeta?.brand) && (
+                  <div className="mt-3 text-left">
+                    <p className="text-sm font-semibold text-gray-800">{productName}</p>
+                    {productBrand ? <p className="text-xs text-gray-500">{productBrand}</p> : null}
+                  </div>
+                )}
               </div>
             </div>
 
